@@ -4,6 +4,8 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.m
 const canvasOverlay = document.getElementById('overlay');
 const uiLevel = document.getElementById('level');
 const uiScore = document.getElementById('score');
+const startScreen = document.getElementById('startScreen');
+const startBtn = document.getElementById('startBtn');
 
 let scene, camera, renderer;
 let rocket, earth;
@@ -18,6 +20,9 @@ let destroyedCount = 0;
 let level = 1;
 let score = 0;
 let clock = new THREE.Clock();
+let gameStarted = false;
+
+startBtn.addEventListener('click', () => startGame());
 
 init();
 animate();
@@ -47,6 +52,7 @@ function init() {
   point.position.set(0, 2, 6);
   scene.add(point);
 
+  // Rocket (player)
   rocket = new THREE.Group();
   const bodyGeo = new THREE.CylinderGeometry(0.7, 0.9, 3.5, 12);
   const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.5, roughness: 0.4 });
@@ -67,6 +73,7 @@ function init() {
   rocket.position.set(0, 0, 0);
   scene.add(rocket);
 
+  // Earth (below)
   const texLoader = new THREE.TextureLoader();
   const earthTex = texLoader.load('https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg');
   const earthGeo = new THREE.SphereGeometry(80, 64, 64);
@@ -75,6 +82,7 @@ function init() {
   earth.position.set(0, -350, 0);
   scene.add(earth);
 
+  // Starfield: many bright points
   const starsGeo = new THREE.BufferGeometry();
   const starsCount = 6000;
   const positions = new Float32Array(starsCount * 3);
@@ -83,13 +91,11 @@ function init() {
     const r = 800 + Math.random() * 1200;
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos((Math.random() * 2) - 1);
-    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    positions[i * 3 + 2] = r * Math.cos(phi);
+    positions[i*3] = r * Math.sin(phi) * Math.cos(theta);
+    positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+    positions[i*3+2] = r * Math.cos(phi);
     const c = 0.8 + Math.random() * 0.5;
-    colors[i * 3] = c;
-    colors[i * 3 + 1] = c;
-    colors[i * 3 + 2] = c;
+    colors[i*3] = colors[i*3+1] = colors[i*3+2] = c;
   }
   starsGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   starsGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -97,12 +103,21 @@ function init() {
   const stars = new THREE.Points(starsGeo, starsMat);
   scene.add(stars);
 
+  // overlay canvas
   resizeOverlay();
   window.addEventListener('resize', onWindowResize);
   window.addEventListener('keydown', onKeyDown);
 }
 
+function startGame() {
+  gameStarted = true;
+  startScreen.style.display = 'none';
+  lastSpawn = performance.now();
+  lastAlienSpawn = performance.now();
+}
+
 function spawnDebris() {
+  if (!gameStarted) return; // only spawn after start
   const size = 0.8 + Math.random() * 1.6;
   const geo = new THREE.IcosahedronGeometry(size, 0);
   const mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.5, roughness: 0.6 });
@@ -122,6 +137,7 @@ function spawnDebris() {
 }
 
 function spawnAlien() {
+  if (!gameStarted) return;
   const alienGroup = new THREE.Group();
 
   const bodyGeo = new THREE.SphereGeometry(2, 18, 18);
@@ -181,12 +197,14 @@ function spawnAlienProjectile(alien) {
 }
 
 function onKeyDown(e) {
+  if (!gameStarted) return;
   if (e.code === 'Space') {
     pulseClean();
   }
 }
 
 function pulseClean() {
+  if (!gameStarted) return;
   const radius = 18;
   debrisList.forEach(d => {
     const dist = d.mesh.position.distanceTo(rocket.position);
@@ -232,6 +250,20 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
   const now = performance.now();
+
+  // Idle animation before start: show rocket bobbing so player sees it
+  if (!gameStarted) {
+    const t = performance.now() * 0.001;
+    rocket.position.y = Math.sin(t * 1.2) * 0.35;
+    rocket.rotation.y = Math.sin(t * 0.4) * 0.12;
+
+    camera.position.lerp(new THREE.Vector3(0, 6 + Math.sin(t) * 0.2, 18), 0.05);
+    camera.lookAt(rocket.position);
+
+    renderer.render(scene, camera);
+    drawOverlay();
+    return; // don't spawn or update enemies yet
+  }
 
   if (now - lastSpawn > spawnInterval) {
     spawnDebris();
