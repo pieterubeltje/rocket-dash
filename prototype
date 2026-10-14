@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <title>Raket - Meteorieten Prototype</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html,body { margin:0; height:100%; overflow:hidden; background:#000; font-family: Arial, Helvetica, sans-serif; }
+    #overlay { position:absolute; left:0; top:0; pointer-events:none; }
+    #ui {
+      position: absolute; left: 12px; top: 12px; color: #fff; z-index: 10;
+      background: rgba(0,0,0,0.25); padding:8px 12px; border-radius:6px;
+      backdrop-filter: blur(4px);
+    }
+    #hint { position:absolute; right:12px; top:12px; color:#fff; background:rgba(0,0,0,0.25); padding:8px 12px; border-radius:6px; }
+    canvas { display:block; }
+    .small { font-size:0.9em; color:#ddd }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div>Level: <span id="level">1</span></div>
+    <div>Score: <span id="score">0</span></div>
+    <div class="small">Spatie = doorspoelen</div>
+  </div>
+  <div id="hint">Wit pijltje = ver, 🔔 rood = dichtbij, groen = verwijderd</div>
+  <canvas id="overlay"></canvas>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
